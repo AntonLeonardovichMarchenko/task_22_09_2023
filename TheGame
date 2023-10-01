@@ -1,0 +1,547 @@
+"""
+Правила
+
+Колода - 36 карт разного достоинства:
+разной масти (suit) -
+               крести (k),
+               буби   (b),
+               пики   (p),
+               черви  (c)
+
+и
+
+разного старшинства (superiority) -
+                      Туз       14   (8),
+                      Король    13   (7),
+                      Дама      12   (6),
+                      Валет     11   (5),
+                      Десять    10   (4),
+                      Девять    9    (3),
+                      Восемь    8    (2),
+                      Семь      7    (1),
+                      Шесть     6    (0),
+
+
+Козырная масть определяется картой под колодой.
+
+Первым ходом первый игрок кидает любую карту под кроющего игрока (следующего игрока).
+
+Кроющий игрок должен покрыть каждую подкинутую под него карту картой той же масти,
+но большего достоинства, или любым козырем. Козырную карту можно покрыть только козырем
+большего достоинства.
+
+Подкидывать можно карты того же достоинства (но другой масти), что и карты, уже лежащие на столе.
+
+Если кроющий игрок всё покрыл, а подкидывать больше нечего (или не хочется), возникает
+ситуация "Бито". При этом "битые" карты удаляются из игры.
+
+Если кроющему игроку нечем крыться, возникает ситуация "Беру". При этом кроющий забирает
+все карты, которые к этому моменту были на столе.
+
+Подкидывать можно не больше 6 карт, или не больше, чем есть карт у кроющего
+(а как узнать, сколько карт у кроющего).
+
+Если кроющий отбился, то следующий первый ход за ним. Если кроющий взял, то будет ходить
+следующий по часовой стрелке игрок.
+
+Проигрывает игрок, последним оставшийся с картами на руках.
+"""
+
+import random
+import main
+
+# карта: масть карты, старшинство карты
+class Card:
+
+    def __init__(self, suitParam, superiorityParam):
+        self.suit = suitParam
+        self.superiority = superiorityParam
+
+    # магические методы на замену typeTheCard. ===========================
+    # __str__() предназначен для создания читаемых (пользователем) строковых
+    # представлений объектов.
+    # __repr__() предназначен для создания "официальных" строковых представлений,
+    # которые могут быть использованы для воссоздания объекта.
+    # Если __str__() не определен для класса, Python будет использовать __repr__()
+    # в качестве запасного варианта.
+    # Рекомендуется определять __repr__() для всех классов и __str__() для классов,
+    # которые имеют смысловое строковое представление (???). =============
+    def __str__(self):
+        return f'suit == {self.suit}, superiority == {self.superiority}'
+    def __repr__(self):
+        return f'suit is {self.suit}, superiority is {self.superiority}'
+
+    def typeTheCard(self):
+        print(f'{self.suit} {self.superiority}')
+
+# колода - список карт ===================================================
+class CardDeck:
+    def __init__(self):
+        self.Deck = list()
+        # исходная карточная колода
+        for super in range(9):
+            self.addCard(Card('k', super))
+            self.addCard(Card('b', super))
+            self.addCard(Card('p', super))
+            self.addCard(Card('c', super))
+
+    # карта - в колоду (в результате - нетасованная колода)
+    def addCard(self, Card):
+        self.Deck.append(Card)
+
+    # тасовка колоды карт
+    def mixCards(self):
+        # здесь применяется вторая колода. Случайная карта из
+        # нетасованной колоды преносится в тасованную.
+        mDeck = list()
+        while len(self.Deck) > 0:
+            deckIndex = random.randint(0, len(self.Deck))
+            deckIndex -= 1
+            # выбранная методом pop по случайному индексу карта из
+            # нетасованной колоды  добавляется в тасованную.
+            mDeck.append(self.Deck.pop(deckIndex))
+
+        self.Deck = mDeck   # тасованная колода становится основной
+
+    def typeCardDeck(self):
+        for card in self.Deck:
+            card.typeTheCard()
+
+
+# игрок ==================================================================
+
+class Player:  # игровой стол - это объект класса Player
+    def __init__(self, playerNumber, playerName):
+
+
+        self.playerNumber = playerNumber  # номер
+        self.playerName = playerName      # имя
+        self.nPlayerCards = 0             # количество карт в колоде игрока
+        self.theFirstCard = None          # первая карта (эта информация важна на столе)
+        self.TrumpCard = None             # козырная карта (эта информация важна на столе)
+        self.Deck = list()                # карты на руках (колода игрока)
+        self.nCards = 0                   # количество карт на руках отбивающего
+                                          # после раздачи в начале игры - 6 карт
+
+
+    # ====================================================================
+
+    # первый игрок - первая карта для подброса. Без выбора!
+    def getTheFirstCardForToss(self):
+        if len(self.Deck) > 0:
+            return self.Deck.pop(0)
+        else:
+            return None
+
+    # остальные игроки - поиск карты по старшинству (по картинке) ========
+    def getTheNextCardForToss(self, card):
+        theRetCard = self.findCardForToss(card.superiority)
+        return theRetCard
+
+    # поиск карты для подброса ===========================================
+    def findCardForToss(self, superiority):
+        # поиск карты для подброса равного
+        # старшинства (поиск карты по картинке)
+        # масть карты здесь НЕ нужна.
+        # Карта сооответствующей масти и старшинста
+        # уже сброшена одним из игроков.
+        # А здесь реализуется алгоритм поиска карты
+        # ДЛЯ ПОДБРОСА. То есть, поиск по картинке.
+        print(f'~~~~~~~~~~ findCardForToss  superiority: {superiority}')
+        if len(self.Deck) > 0:
+            for c in range(len(self.Deck)):
+                if self.Deck[c].superiority == superiority:
+                    theCard = self.Deck[c]
+                    self.Deck.remove(theCard)
+                    self.nPlayerCards = len(self.Deck)
+                    return theCard
+        else:
+            return None
+
+    # попытка отбивающего игрока отбиться. Битые карты выкидываются со
+    # стола и из колоды отбивающего ======================================
+    def fightBack(self, table):
+        print('_____ this is the bater _____')
+        self.typePlayer()
+        print('-----------------------------')
+
+        # перебор всех карт со стола. Их количество равно количеству карт на
+        # руках отбивающего. Если отбивающий НЕ сумел отбиться - это его проблема.
+        for tableCard in table.Deck:
+        # отбивающему предлагаются карты со стола. Он отбивается либо забирает
+        # небитую карту ==================================================
+            goFight = True
+            for baterCard in self.Deck:
+                # отбивающий пытается отбитсья по ПЕРВОМУ варианту: он в своей колоде
+                # ищет карту, которая совпала бы по масти с картой со стола и была бы старше её.
+                if baterCard.suit == tableCard.suit and baterCard.superiority > tableCard.superiority:
+                    table.Deck.remove(tableCard)
+                    table.nPlayerCards = len(table.Deck)
+                    self.Deck.remove(baterCard)
+                    self.nPlayerCards = len(self.Deck)
+                    goFight = False
+                    # отбивающий отбился по ПЕРВОМУ варианту: у него на руках оказалась карта,
+                    # которая совпала по масти с картой со стола и большей по старшинству.
+                    break
+
+
+                # отбивающий пытается отбитсья по ВТОРОМУ варианту: он ищет в своей колоде
+                # козырную карту, которой он смог бы отбиться.
+                if baterCard.suit == table.TrumpCard:
+                    table.Deck.remove(tableCard)
+                    table.nPlayerCards = len(table.Deck)
+                    self.Deck.remove(baterCard)
+                    self.nPlayerCards = len(self.Deck)
+                    goFight = False
+                    # отбивающий отбился по ВТОРОМУ варианту: у него на руках оказалась
+                    # КОЗЫРНАЯ карта.
+                    # break
+
+            # отбивающий НЕ отбился. Он забирает ВСЕ оставшиеся карты со стола
+            if goFight == True:
+                while len(table.Deck):
+                    self.addCard(table.Deck.pop(0))
+
+            # отбиться НЕ сумел, однако... Забрал со стола все карты ==========
+            print('^^^^^ condolences ^^^^^')
+            self.typePlayer()
+            print('^^^^^^^^^^^^^^^^^^^^^^^')
+
+        # отбился. Поздравления ==========================================
+        print('!!!!! congratulations !!!!!')
+        self.typePlayer()
+        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+
+    # ====================================================================
+
+
+    # карта (из тасованной колоды) - в колоду игрока
+    def addCard(self, Card):
+        self.Deck.append(Card)
+        self.nPlayerCards = len(self.Deck)
+
+    def typePlayer(self):
+        print(self.playerNumber, self.playerName)
+        for card in self.Deck:
+            card.typeTheCard()
+
+    @staticmethod
+    def getNextIndexForPlayer(indexOfPlayer, indexOfbater, playersList, table):
+        # сначала находится индекс следующего игрока. Это НЕ отбивающий.
+        indexOfPlayer = Player.nextPlayer(indexOfPlayer, indexOfbater, len(playersList))
+
+        # ================================================================
+        # этот игрок выбирает карту из своей колоды, соответствующую
+        # достоинству карты, которую подкинул первый игрок.
+        # ограничения при выборе карты:
+        # 1. у отбивающего на руках ограниченное количество карт, больше которого
+        # ПОДКИДЫВАТЬ просто нет смысла. Он всё равно не сможет отбиться.
+        # Допустимое количество карт к этому моменту уже зафиксировано
+        # на столе
+        # 2. у подкидывающего может не быть карты соответствующего достоинства
+        #
+        # ================================================================
+        #   количество карт
+        #   у отбивающего
+        #                 количество карт, которое
+        #                 подкидывающие уже подкинули на стол
+        if table.nCards > len(table.Deck):
+            theCard = playersList[indexOfPlayer].getTheNextCardForToss(table.theFirstCard)
+            # при этом условии можно попытаться поискать карту, чтобы подкинуть отбивающему.
+            # результатом поиска карты соответствующего достоинства у подкидывающего
+            # может быть None. Ну нету у него нужной карты!
+        else:
+            # если отбивающему уже просто НЕВОЗМОЖНО больше подкинуть карту, то
+            # здесь None без вариантов. Даже пытаться искать не надо.
+            theCard = None
+
+        # карта найдена, она подкидывается отбивающему (кидается на стол)
+        if theCard is not None:
+            table.addCard(theCard)
+
+            print('!!! getNextIndexForPlayer !!!')
+            print(f'bater == {indexOfbater}, '
+                  f'player == {indexOfPlayer}, '
+                  f'the Card: {theCard}')
+            # здесь работает магический метод __str__(self).
+            # Он формирует читаемое строковое представление объекта -
+            # представителя класса Card и работает вместо метода typeTheCard
+        else:
+
+            print('??? getNextIndexForPlayer ???')
+            print(f'bater == {indexOfbater}, '
+                  f'player == {indexOfPlayer}, '
+                  f'the Card: None')
+
+        # подкидывающий сделал всё, что мог (узнал, можно ли подкинуть карту
+        # отбивающему и попытался найти подходящую карту).
+        # Здесь возвращается его индекс
+
+        table.typePlayer()
+
+        return indexOfPlayer
+
+    # изменение индекса очерёдности для отбивающего
+    @staticmethod
+    def nextIndexForBater(currentIndex,lenOfPlayersList):
+
+        currentIndex += 1
+        if currentIndex == lenOfPlayersList:
+            currentIndex = 0
+
+        return currentIndex
+
+    # индекс по столу подкидывающих игроков: следующий по порядку,
+    # минуя отбивающего
+    @staticmethod
+    def nextPlayer(current, bater, full):
+
+        current = Player.nextIndexForBater(current, full)
+        if current == bater:
+            current = Player.nextIndexForBater(current, full)
+
+        return current
+
+    # информация о ВСЕХ игроках
+    @staticmethod
+    def typePlayers(playersList):
+        for player in playersList:
+            player.typePlayer()
+
+# ========================================================================
+
+class Game:
+
+    table = Player(None, 'The table')
+
+    # игра по кругу. Каждый игрок отбивается (покрывает) по очереди.
+    # Игрок, который отбивается - bater
+    @staticmethod
+    def playGame(cd, playersList, indexOfPlayer, indexOfbater, table):
+
+        # игра идёт до тех пор, пока у одного из игроков НЕ ОСТАНЕТСЯ ни одной карты.
+        while Game.doIt(playersList) == True:
+
+
+            # По умолчанию первый отбивающий - это игрок с индексом 0
+
+
+            # индекс отбивающего игрока на столе
+            table.playerNumber = indexOfbater
+            table.nCards = playersList[indexOfbater].nPlayerCards
+            print(f'the bater: {indexOfbater} =====')
+            playersList[indexOfbater].typePlayer()
+            print('================================')
+
+            # индекс подкидывающего игрока
+            # индекс по столу подкидывающих игроков (!): следующий подкидывающий по порядку,
+            # минуя отбивающего. Первый подкидывающий кидает на стол ПЕРВУЮ карту из
+            # своей колоды. Остальные подкидывающие выбирают карту соответствующего
+            # достоинства
+
+            # здесь важно определить индекс ПЕРВОГО игрока.
+            indexOfPlayer = Player.nextPlayer(indexOfPlayer, indexOfbater, len(playersList))
+            # Дальше - всё просто: он кидает на стол ПЕРВУЮ карту из своей колоды.
+            theCard = playersList[indexOfPlayer].getTheFirstCardForToss()
+
+            # первая карта кладётся на стол
+            if theCard is not None:
+                table.addCard(theCard)
+
+                # эта карта определяет, какие карты могут кидать на стол
+                # остальные подкидывающие
+                table.theFirstCard = table.Deck[0]
+
+                print('===== the state of the table (0) =====')
+                table.typePlayer()
+                print('======================================')
+
+                print(f'bater == {indexOfbater}, '
+                      f'player == {indexOfPlayer}, '
+                      f'the Card:  {theCard}')
+                # здесь работает магический метод __str__(self).
+                # Он формирует читаемое строковое представление объекта -
+                # представителя класса Card и работает вместо метода typeTheCard
+            else:
+                print(f'bater == {indexOfbater}, '
+                      f'player == {indexOfPlayer}, '
+                      f'the Card: None')
+
+            # а здесь каждому подкидывающему надо определить свой индекс, посмотреть на стол
+            # и подкинуть подходящую карту, если только это МОЖНО СДЕЛАТЬ (такая карта у
+            # подкидывающего имеется и её можно подкинуть)
+            indexOfPlayer = Player.getNextIndexForPlayer(indexOfPlayer, indexOfbater, playersList, table)
+            # состояние стола после раздачи ==========================
+            print('===== the state of the table (1) =====')
+            table.typePlayer()
+            print('==================================')
+            indexOfPlayer = Player.getNextIndexForPlayer(indexOfPlayer, indexOfbater, playersList, table)
+            # состояние стола после раздачи ==========================
+            print('===== the state of the table (2) =====')
+            table.typePlayer()
+            print('==================================')
+            indexOfPlayer = Player.getNextIndexForPlayer(indexOfPlayer, indexOfbater, playersList, table)
+            # состояние стола после раздачи ==========================
+            print('===== the state of the table (3) =====')
+            table.typePlayer()
+            print('==================================')
+
+            # очередной отбивающий должен отбиться =======================
+            playersList[indexOfbater].fightBack(table)
+
+            # и в этой карусели каждый игрок становится отбивающим ===
+
+            # изменение значения крющего флага бывшему отбивающему
+            indexOfbater = Player.nextIndexForBater(indexOfbater, len(playersList))
+            # индекс нового отбивающего
+
+            # изменение значения крющего флага новому отбивающему
+            print(f'the bater: {indexOfbater} ~~~~~')
+            playersList[indexOfbater].typePlayer()
+            print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+            # индекс отбивающего записывается на столе
+            table.playerNumber = indexOfbater
+            # количество карт, которое можно подкинуть на стол отбивающему.
+            # Оно равно количеству карт в колоде игрока (отбивающего)
+            table.nCards = playersList[indexOfbater].nPlayerCards
+
+            # стол очищается от карт прошлой игры
+            table.Deck.clear()
+
+            # пока это возможно - пополнение колоды до 6 карт
+            # у тех игроков, кто в этом нуждается.
+            # Карты забираются из остатков колоды растасованной
+            # в начале игры, откуда проводилась первая раздача.
+            # Раздача нормирована: одна карта (!!!) нуждающемуся
+            # игроку после очередного кона игры
+
+            main.nextCardsDistribute(cd.Deck, playersList)
+
+        vinner = Game.whoIsVinner(playersList)
+        print(f'index of vinner {vinner}')
+
+        for i in range(len(playersList)):
+            if i == vinner:
+                print('!!!!!!!!!!! this player is the vinner  !!!!!!!!!!!')
+                playersList[i].typePlayer()
+                print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            else:
+                print('??????? this player is not not the vinner  ???????')
+                playersList[i].typePlayer()
+                print('??????????????????????????????????????????????????')
+
+
+
+    @staticmethod
+    def doIt(playersList):
+        for player in playersList:
+            if len(player.Deck) == 0:
+                return False
+        return True
+
+    @staticmethod
+    def whoIsVinner(playersList):
+        for i in range(len(playersList)):
+            if len(playersList[i].Deck) == 0:
+                return i
+
+# ========================================================================
+
+
+# def firstCardsDistribute(cardsDesk, playersList):
+#     # раздача
+#     # по 6 карт (из тасованной колоды) игроку в руки
+#
+#     # колода ДО раздачи ==================================================
+#     # print('========== card.typeTheCard() ===============')
+#     # for card in cardsDesk:
+#     #     card.typeTheCard()
+#     # print('==============================================')
+#
+#
+#     for player in playersList:
+#         i = 0
+#         while i < 6:
+#             player.addCard(cardsDesk.pop(0))
+#             i += 1
+#
+#     # колода ПОСЛЕ раздачи ==================================================
+#     print('========== card.typeTheCard() after distribution ===============')
+#     for card in cardsDesk:
+#         card.typeTheCard()
+#     print('==============================================')
+#
+#     # в результате раздачи остаётся часть колоды. Последняя карта из остатка
+#     # - козырная. На самом деле, не важно, какая она. Последняя, первая, ...,
+#     # важно, что она из остатка колоды, которая имеет фиксированную длину и у
+#     # козырной карты есть свой индекс ====================================
+#
+# def nextCardsDistribute(cardsDesk, playersList):
+#
+#     # очередная раздача
+#     # для добора до 6 карт (из остатка колоды) каждому игроку после очередного
+#     # кона игры в руки одну карту.
+#     # Раздайте оставшиеся карты ВСЕМ, кто в этом нуждается!
+#     for pIndex in range(len(playersList)):
+#         if len(playersList[pIndex].Deck) < 6 and len(cardsDesk) > 0:
+#             playersList[pIndex].addCard(cardsDesk.pop(0))
+#
+#     # колода ПОСЛЕ раздачи ===============================================
+#     # print('========== card.typeTheCard() ===============')
+#     # for card in cardsDesk:
+#     #     card.typeTheCard()
+#     # print('==============================================')
+
+# def CardTest(nPlayers):
+#     table = Player(None, 'The table')  # стол, куда игроки подкидывают кроющему карты
+#     cd = CardDeck()
+#
+#     print('Card Deck =====================================================')
+#     cd.typeCardDeck()
+#     # растасовка колоды ==================================================
+#     cd.mixCards()
+#     print('Start Mixed Card Deck =========================================')
+#     cd.typeCardDeck()
+#     print('Stop Mixed Card Deck ==========================================')
+#
+#     # список игроков =====================================================
+#     playersList = list()
+#     for p in range(nPlayers):
+#         playersList.append(Player(p, 'Player'+str(p)))
+#
+#     # раздача карт из тасованной колоды игрокам ==========================
+#     firstCardsDistribute(cd.Deck, playersList)
+#
+#     print('players =======================================================')
+#     Player.typePlayers(playersList)
+#
+#     print('the rest ======================================================')
+#     # в колоде - остаток с козырной картой, который и распечатывается
+#     cd.typeCardDeck()
+#
+#     #  последняя карта остатка - козырная. Информация об этой карте
+#     #  сразу идёт на стол
+#     table.TrumpCard = cd.Deck.pop()
+#
+#     print(f'the Trump ============================')
+#     table.TrumpCard.typeTheCard()   # вот она
+#     print(f'======================================')
+#
+#     print('the rest whithout the Trump ====================================')
+#     cd.typeCardDeck()       # остаток без козыря
+#
+#     # print('========== playersList[0].typePlayer() ==========')
+#     # playersList[0].typePlayer()
+#     # print('=================================================')
+#
+#     # игра по кругу. Каждый игрок отбивается (покрывает) по очереди.
+#     # Игрок, который отбивается - это bater
+#
+#     indexOfbater = 0
+#     indexOfPlayer = 0
+#
+#     Game.playGame(cd, playersList, indexOfPlayer, indexOfbater, table)
+
+
+
+#CardTest(4)
