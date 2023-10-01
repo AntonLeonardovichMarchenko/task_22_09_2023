@@ -1,0 +1,107 @@
+import TheGame as game
+
+def firstCardsDistribute(cardsDesk, playersList):
+    # раздача
+    # по 6 карт (из тасованной колоды) игроку в руки
+
+    # колода ДО раздачи ==================================================
+    # print('========== card.typeTheCard() ===============')
+    # for card in cardsDesk:
+    #     card.typeTheCard()
+    # print('==============================================')
+
+
+    for player in playersList:
+        i = 0
+        while i < 6:
+            player.addCard(cardsDesk.pop(0))
+            i += 1
+
+    # колода ПОСЛЕ раздачи ==================================================
+    print('========== card.typeTheCard() after distribution ===============')
+    for card in cardsDesk:
+        card.typeTheCard()
+    print('==============================================')
+
+    # в результате раздачи остаётся часть колоды. Последняя карта из остатка
+    # - козырная. На самом деле, не важно, какая она. Последняя, первая, ...,
+    # важно, что она из остатка колоды, которая имеет фиксированную длину и у
+    # козырной карты есть свой индекс ====================================
+
+def nextCardsDistribute(cardsDesk, playersList):
+
+    # очередная раздача
+    # для добора до 6 карт (из остатка колоды) каждому игроку после очередного
+    # кона игры в руки одну карту.
+    # Раздайте оставшиеся карты ВСЕМ, кто в этом нуждается!
+    for pIndex in range(len(playersList)):
+        if len(playersList[pIndex].Deck) < 6 and len(cardsDesk) > 0:
+            playersList[pIndex].addCard(cardsDesk.pop(0))
+
+    # колода ПОСЛЕ раздачи ===============================================
+    # print('========== card.typeTheCard() ===============')
+    # for card in cardsDesk:
+    #     card.typeTheCard()
+    # print('==============================================')
+
+
+
+def CardTest(nPlayers):
+    table = game.Player(None, 'The table')  # стол, куда игроки подкидывают кроющему карты
+    cd = game.CardDeck()
+
+    print('Card Deck =====================================================')
+    cd.typeCardDeck()
+    # растасовка колоды ==================================================
+    cd.mixCards()
+    print('Start Mixed Card Deck =========================================')
+    cd.typeCardDeck()
+    print('Stop Mixed Card Deck ==========================================')
+
+    # список игроков =====================================================
+    playersList = list()
+    for p in range(nPlayers):
+        playersList.append(game.Player(p, 'Player'+str(p)))
+
+    # раздача карт из тасованной колоды игрокам ==========================
+    firstCardsDistribute(cd.Deck, playersList)
+
+    print('players =======================================================')
+    game.Player.typePlayers(playersList)
+
+    print('the rest ======================================================')
+    # в колоде - остаток с козырной картой, который и распечатывается
+    cd.typeCardDeck()
+
+    #  последняя карта остатка - козырная. Информация об этой карте
+    #  сразу идёт на стол
+    table.TrumpCard = cd.Deck.pop()
+
+    print(f'the Trump ============================')
+    table.TrumpCard.typeTheCard()   # вот она
+    print(f'======================================')
+
+    print('the rest whithout the Trump ====================================')
+    cd.typeCardDeck()       # остаток без козыря
+
+    # print('========== playersList[0].typePlayer() ==========')
+    # playersList[0].typePlayer()
+    # print('=================================================')
+
+    # игра по кругу. Каждый игрок отбивается (покрывает) по очереди.
+    # Игрок, который отбивается - это bater
+
+    indexOfbater = 0
+    indexOfPlayer = 0
+
+    game.Game.playGame(cd, playersList, indexOfPlayer, indexOfbater, table)
+
+
+def play():
+    CardTest(4)
+
+def main():
+    play()
+
+if __name__ == '__main__':
+    main()
